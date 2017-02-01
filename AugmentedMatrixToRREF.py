@@ -43,10 +43,18 @@ def print_matrix(m):
         f.write('\\\\')
     f.write('&\\begin{amatrix}{' + str(len(m[0]) - 1) + '}')
     for i in m:
+        contains_fraction = False
         for k in range (len(i) - 1):
-            f.write(str(i[k]) + '&')
+            if not (i[k] is str) and i[k].denominator != 1:
+                f.write('\\frac{'+str(i[k].numerator)+ \
+                        '}{'+str(i[k].denominator)+'}&')
+                contains_fraction = True
+            else:
+                f.write(str(i[k]) + '&')
             print(i[k], end=' ')
         f.write(str(i[len(i) - 1]) + '\\\\')
+        if contains_fraction:
+            f.write('[0.25em]')
         print(i[len(i) - 1])
     f.write('\\end{amatrix}\n')
     print("=============================")
@@ -58,7 +66,7 @@ def print_matrix(m):
 # Subtracts row, r2, from row, r1, enough times to make
 #   row, r1, column, lead_pos, equal 0
 def row_subtract(r1, r2, lead_pos):
-    mult = matrix[r1][lead_pos]
+    mult, contains_fraction = matrix[r1][lead_pos], False
     if mult == 0:
         f.write('\\\\')
         return
@@ -69,17 +77,32 @@ def row_subtract(r1, r2, lead_pos):
         factor = '+R_'+str(r2+1)
         sfactor = '+'
     elif mult < 0:
+        if mult.denominator != 1:
+            sfactor = '+\\frac{'+str(abs(mult.numerator))+ \
+                      '}{'+str(mult.denominator)+'}'
+            contains_fraction = True
+        else:
+            sfactor = '+'+str(abs(mult))
         factor = '+'+str(abs(mult))+'R_'+str(r2+1)
-        sfactor = '+'+str(mult)
     else:
-        factor = '-'+str(abs(mult))+'R_'+str(r2+1)
-        sfactor = '-'+str(mult)
+        if mult.denominator != 1:
+            sfactor = '-\\frac{'+str(mult.numerator)+ \
+                      '}{'+str(mult.denominator)+'}'
+            contains_fraction = True
+        else:
+            sfactor = '-'+str(mult)
+        factor = '-'+str(mult)+'R_'+str(r2+1)
     for i in range (len(matrix[r1])):
         if type(matrix[r1][i]) is str:
-            matrix[r1][i] += sfactor+str(matrix[r2][i])
+            if len(matrix[r1][i]) > 3:
+                matrix[r1][i] += sfactor+'('+str(matrix[r2][i])+')'
+            else:
+                matrix[r1][i] += sfactor+str(matrix[r2][i])
         else:
             matrix[r1][i] -= mult * matrix[r2][i]
     f.write('R_'+str(r1+1)+factor+'\\\\')
+    if contains_fraction:
+            f.write('[0.25em]')
     print('R_'+str(r1+1)+factor)
     return
 
@@ -138,14 +161,31 @@ def divide_row(row_num, lead):
     for i in range (len(matrix[row_num])):
         if type(matrix[row_num][i]) is str:
             prev = matrix[row_num][i]
-            matrix[row_num][i] = str(Fraction(1, lead))+prev
+            recc = Fraction(1, lead)
+            if recc.denominator != 1:
+                matrix[row_num][i] = '\\frac{'+str(recc.numerator)+'}{' \
+                        +str(recc.denominator)+'}'
+                if len(prev) > 3:
+                    matrix[row_num][i] += '('+prev+')'
+                else:
+                    matrix[row_num][i] += prev
+            else:
+                if len(prev) > 3:
+                    matrix[row_num][i] = str(recc)+'('+prev+')'
+                else:
+                    matrix[row_num][i] = str(recc)+prev
         else:
             matrix[row_num][i] /= lead
     print(str(Fraction(1, lead))+'R_'+str(row_num+1))
     f.write('\\begin{array}{c}')
     for r in range(len(matrix)):
         if r == row_num:
-            f.write(str(Fraction(1, lead))+'R_'+str(row_num+1)+'\\\\')
+            recc = Fraction(1, lead)
+            if recc.denominator != 1:
+                f.write('\\frac{'+str(recc.numerator)+'}{' \
+                        +str(recc.denominator)+'}R_'+str(row_num+1)+'\\\\[0.25em]')
+            else:
+                f.write(str(recc)+'R_'+str(row_num+1)+'\\\\')
         else:
             f.write('\\\\')
     f.write('\\end{array}')
